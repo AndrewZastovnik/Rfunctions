@@ -1,0 +1,67 @@
+grp.names<-function(x){
+	#Function to give letter names
+	ans <- character(sum(sapply(x,length)))
+	for(i in 1:length(x)){
+		for(j in 1:length(x[[i]])){
+			ans[x[[i]][j]] <- LETTERS[i]
+		}
+	}
+	return(ans)
+}
+
+find.possibles<-function(avalible,grps.mates,k1 = NULL,k2=NULL){
+	#function to index avalible numbers and ensure it is still solvable after we pick the next groupmate
+	#left finds how many groups we have left to assign
+	left<-ceiling(length(avalible)/3)-1
+	if (length(k1) > 0){
+		#these just index the possible group mates based on what has
+		#already been choosen to ensure we aren't selecting students
+		#that have already been in the same group
+		avalible<-avalible[!avalible %in% grp.mates[[c(k1,1)]]]
+	}
+	if (length(k2) > 0){
+		avalible<-avalible[!avalible %in% grp.mates[[c(k2,1)]]]
+	}
+	#index is going to be used incase there are group members we have to choose at this level
+	index<-NULL
+	for (i in avalible){
+		#this tests if the ith student has more past groupmembers in avalible than there
+		#will be groups avalible to put them in. 
+		if (sum(avalible %in% grp.mates[[c(i,1)]]) >= left & left >0){
+			#if this is true we have to include one of the students in this past group in
+			#this current group 
+			index <- avalible[avalible %in% grp.mates[[c(i,1)]]]
+			break
+		}
+	}
+	if (length(index)==0){
+		return(avalible)
+	}else{
+		return(index)
+	}
+}
+resample<-function(x,...){
+	#need a new sample function since x can be length 1
+	x[sample(length(x),...)]
+}
+
+random.grps<-function(x,grp.mates){
+	#initialize a list to store the row indices of each member in a group
+	grps<-vector("list",length=nrow(x)%/%3)
+	#avalible is the group members we haven't assigned yet
+	avalible<-1:nrow(x)
+	for(i in 1:(nrow(x)%/%3)){
+		#randomly pick first group member
+		k1<-resample(find.possibles(avalible,grp.mates),size=1)
+		#remove it from the avalible members
+		avalible<-avalible[avalible !=k1]
+		#do the same for the second but don't allow people k1 has already grouped with
+		k2<-resample(find.possibles(avalible,grp.mates,k1),size=1)
+		#and so on
+		avalible<-avalible[avalible !=k2]
+		k3<-resample(find.possibles(avalible,grp.mates,k1,k2),size=1)
+		avalible<-avalible[avalible !=k3]
+		grps[[i]] <- c(k1,k2,k3)
+	}
+	return(grp.names(grps))
+}
